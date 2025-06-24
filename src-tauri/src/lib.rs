@@ -9,7 +9,7 @@ mod utils;
 
 use tauri::{
   menu::{Menu, MenuItem},
-  tray::{TrayIconBuilder},
+  tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
   Manager, WindowEvent
 };
 
@@ -40,7 +40,7 @@ pub fn run() {
         ])
         .setup(|app| {
             /* -------- tray menu -------- */
-            let show = MenuItem::with_id(app, "show", "Show window", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
@@ -57,6 +57,19 @@ pub fn run() {
                 "quit" => app.exit(0),
                 _ => {}
                 })
+                .on_tray_icon_event(
+                    |app, event| if let TrayIconEvent::Click { 
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                         } = event {
+                        if let Some(win) = app.app_handle().get_webview_window("main") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                )
+                .icon(app.default_window_icon().unwrap().clone())
                 .build(app)?;
 
             Ok(())
