@@ -50,8 +50,8 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                 "show" => {
                     if let Some(win) = app.get_webview_window("main") {
-                    let _ = win.show();
-                    let _ = win.set_focus();
+                        let _ = win.show();
+                        let _ = win.set_focus();
                     }
                 }
                 "quit" => app.exit(0),
