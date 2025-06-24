@@ -75,9 +75,11 @@
   .row {
     display: flex;
     align-items: center;
+    
     gap: 0.5rem;
   }
   input {
     flex: 1;
+    width: 220px
   }
 </style>
