@@ -3,6 +3,7 @@ use std::sync::mpsc::channel;
 use notify::{recommended_watcher, EventKind, RecursiveMode, Watcher};
 use reqwest::blocking::Client;
 
+use crate::utils::erabooru::UploadResult;
 // Import from your other modules
 use crate::{STATE, WatcherHandle};
 use crate::utils;
@@ -54,9 +55,10 @@ pub fn start_watching(app: tauri::AppHandle) -> Result<(), String> {
                             let content_type = utils::files::get_file_mime_type(&path)
                                 .unwrap_or_else(|| "application/octet-stream".into());
 
-                            match utils::erabooru::upload_media(&client, &server, data, &content_type) {
-                                Ok(()) => println!("Successfully uploaded: {}", path.display()),
-                                Err(e) => println!("Failed to upload {}: {}", path.display(), e),
+                            match utils::erabooru::upload_media(&client, &settings.server, data, &content_type) {
+                                Ok(UploadResult::Uploaded) => println!("✓ Uploaded: {}", path.display()),
+                                Ok(UploadResult::Duplicate) => println!("⚠ Skipped (duplicate): {}", path.display()),
+                                Err(e) => println!("✗ Failed to upload {}: {}", path.display(), e),
                             }
                         }
                     }

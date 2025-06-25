@@ -1,7 +1,7 @@
 use walkdir::WalkDir;
 use reqwest::blocking::Client;
 use std::time::Duration;
-use crate::utils;
+use crate::utils::{self, erabooru::UploadResult};
 
 #[tauri::command]
 pub fn scan_folder(folder: String) -> Result<(u64, u64, u64), String> {
@@ -46,8 +46,9 @@ pub fn upload_folder(app: tauri::AppHandle, folder: String) -> Result<(), String
             let content_type = utils::files::get_file_mime_type(path)
                 .unwrap_or_else(|| "application/octet-stream".into());
             match utils::erabooru::upload_media(&client, &settings.server, data, &content_type) {
-                Ok(()) => println!("Uploaded {}", path.display()),
-                Err(e) => println!("Failed to upload {}: {}", path.display(), e),
+                Ok(UploadResult::Uploaded) => println!("✓ Uploaded: {}", path.display()),
+                Ok(UploadResult::Duplicate) => println!("⚠ Skipped (duplicate): {}", path.display()),
+                Err(e) => println!("✗ Failed to upload {}: {}", path.display(), e),
             }
         }
     }
