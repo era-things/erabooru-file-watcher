@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "erabooru-file-watcher",
-        "width": 400,
-        "height": 150,
+        "width": 450,
+        "height": 300,
         "resizable": false
       }
     ],

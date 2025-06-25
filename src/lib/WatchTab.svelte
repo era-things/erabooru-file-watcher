@@ -1,17 +1,12 @@
 <script lang="ts">
-  import { open } from '@tauri-apps/plugin-dialog';
   import { invoke } from '@tauri-apps/api/core';
   import { load } from '@tauri-apps/plugin-store';
   import { onMount } from 'svelte';
+  import FolderPicker from '../components/FolderPicker.svelte';
 
   let folder = $state('');
   let server = $state('');
   let running = $state(false);
-
-  async function selectFolder() {
-    const selected = await open({ directory: true, multiple: false });
-    if (selected) folder = selected as string;
-  }
 
   type Settings = { folder: string; server: string };
 
@@ -44,26 +39,34 @@
 </script>
 
 <div class="p-4 space-y-4">
+  <FolderPicker bind:value={folder} label="Watch Folder" />
+  
+  <div class="space-y-1">
+    <span class="text-sm font-medium text-gray-700">Server</span>
+    <input 
+      class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+      bind:value={server} 
+      placeholder="http://localhost:3000"
+    />
+  </div>
+  
   <div class="flex items-center gap-2">
-    <label class="flex-1">
-      <span class="text-sm">Folder</span>
-      <input class="w-full border p-1" readonly bind:value={folder} />
-    </label>
-    <button class="px-3 py-1 rounded bg-blue-500 text-white" onclick={selectFolder}>
-      Select
+    <button 
+      class="px-4 py-2 rounded bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors" 
+      onclick={saveState}
+    >
+      Save
     </button>
-  </div>
-  <div class="flex items-center gap-2">
-    <label class="flex-1">
-      <span class="text-sm">Server</span>
-      <input class="w-full border p-1" bind:value={server} />
-    </label>
-  </div>
-  <div class="flex items-center gap-2">
-    <button class="px-3 py-1 rounded bg-blue-500 text-white" onclick={saveState}>Save</button>
-    <button class="px-3 py-1 rounded bg-blue-500 text-white" onclick={toggle}>
-      {running ? 'Stop' : 'Run'}
+    <button 
+      class="px-4 py-2 rounded text-sm font-medium transition-colors" 
+      class:bg-red-500={running}
+      class:hover:bg-red-600={running}
+      class:bg-blue-500={!running}
+      class:hover:bg-blue-600={!running}
+      class:text-white={true}
+      onclick={toggle}
+    >
+      {running ? 'Stop' : 'Start Watching'}
     </button>
   </div>
 </div>
-
