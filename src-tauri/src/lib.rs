@@ -37,6 +37,8 @@ pub fn run() {
             commands::settings::load_settings,
             commands::watching::start_watching,
             commands::watching::stop_watching,
+            commands::uploading::scan_folder,
+            commands::uploading::upload_folder,
         ])
         .setup(|app| {
             /* -------- tray menu -------- */
