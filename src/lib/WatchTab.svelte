@@ -4,9 +4,17 @@
   import { onMount } from 'svelte';
   import FolderPicker from '../components/FolderPicker.svelte';
 
-  let folder = $state('');
-  let server = $state('');
-  let running = $state(false);
+  interface WatchState {
+    folder: string;
+    server: string;
+    running: boolean;
+  }
+
+  interface Props {
+    state: WatchState;
+  }
+
+  let { state = $bindable() }: Props = $props();
 
   type Settings = { folder: string; server: string };
 
@@ -14,24 +22,24 @@
     const store = await load('store.json');
     const settings = await store.get<Settings>('settings');
     if (settings) {
-      folder = settings.folder || '';
-      server = settings.server || '';
+      state.folder = settings.folder || '';
+      state.server = settings.server || '';
     }
   }
 
   async function saveState() {
     const store = await load('store.json');
-    await store.set('settings', { folder, server });
+    await store.set('settings', { folder: state.folder, server: state.server });
     await store.save();
   }
 
   async function toggle() {
-    if (!running) {
+    if (!state.running) {
       await invoke('start_watching');
-      running = true;
+      state.running = true;
     } else {
       await invoke('stop_watching');
-      running = false;
+      state.running = false;
     }
   }
 
@@ -39,13 +47,13 @@
 </script>
 
 <div class="p-4 space-y-4">
-  <FolderPicker bind:value={folder} label="Watch Folder" />
+  <FolderPicker bind:value={state.folder} label="Watch Folder" />
   
   <div class="space-y-1">
     <span class="text-sm font-medium text-gray-700">Server</span>
     <input 
       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-      bind:value={server} 
+      bind:value={state.server} 
       placeholder="http://localhost:3000"
     />
   </div>
@@ -59,14 +67,14 @@
     </button>
     <button 
       class="px-4 py-2 rounded text-sm font-medium transition-colors" 
-      class:bg-red-500={running}
-      class:hover:bg-red-600={running}
-      class:bg-blue-500={!running}
-      class:hover:bg-blue-600={!running}
+      class:bg-red-500={state.running}
+      class:hover:bg-red-600={state.running}
+      class:bg-blue-500={!state.running}
+      class:hover:bg-blue-600={!state.running}
       class:text-white={true}
       onclick={toggle}
     >
-      {running ? 'Stop' : 'Start Watching'}
+      {state.running ? 'Stop' : 'Start Watching'}
     </button>
   </div>
 </div>

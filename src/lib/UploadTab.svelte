@@ -2,19 +2,27 @@
   import { invoke } from '@tauri-apps/api/core';
   import FolderPicker from '../components/FolderPicker.svelte';
 
-  let folder = $state('');
-  let videoCount = $state(0);
-  let imageCount = $state(0);
-  let totalSize = $state(0);
+  interface UploadState {
+    folder: string;
+    videoCount: number;
+    imageCount: number;
+    totalSize: number;
+  }
 
-  let hasMedia = $derived(videoCount > 0 || imageCount > 0);
+  interface Props {
+    state: UploadState;
+  }
+
+  let { state = $bindable() }: Props = $props();
+
+  let hasMedia = $derived(state.videoCount > 0 || state.imageCount > 0);
 
   async function onFolderChange(selectedFolder: string) {
     if (selectedFolder) {
       const result = await invoke<[number, number, number]>('scan_folder', { folder: selectedFolder });
-      videoCount = result[0];
-      imageCount = result[1];
-      totalSize = result[2];
+      state.videoCount = result[0];
+      state.imageCount = result[1];
+      state.totalSize = result[2];
     }
   }
 
@@ -23,8 +31,8 @@
   }
 
   function getMediaDescription() {
-    const hasVideos = videoCount > 0;
-    const hasImages = imageCount > 0;
+    const hasVideos = state.videoCount > 0;
+    const hasImages = state.imageCount > 0;
     
     if (!hasVideos && !hasImages) {
       return "This folder does not contain any supported media files.";
@@ -32,25 +40,25 @@
     
     const parts = [];
     if (hasVideos) {
-      parts.push(`<span class="font-semibold text-blue-600">${videoCount} video${videoCount !== 1 ? 's' : ''}</span>`);
+      parts.push(`<span class="font-semibold text-blue-600">${state.videoCount} video${state.videoCount !== 1 ? 's' : ''}</span>`);
     }
     if (hasImages) {
-      parts.push(`<span class="font-semibold text-green-600">${imageCount} image${imageCount !== 1 ? 's' : ''}</span>`);
+      parts.push(`<span class="font-semibold text-green-600">${state.imageCount} image${state.imageCount !== 1 ? 's' : ''}</span>`);
     }
     
     const mediaText = parts.length === 2 ? parts.join(' and ') : parts[0];
-    return `This will upload ${mediaText} files, with total size of <span class="font-semibold text-purple-600">${formatSize(totalSize)} MB</span>`;
+    return `This will upload ${mediaText}, with total size of <span class="font-semibold text-purple-600">${formatSize(state.totalSize)} MB</span>`;
   }
 
   async function upload() {
-    await invoke('upload_folder', { folder });
+    await invoke('upload_folder', { folder: state.folder });
   }
 </script>
 
 <div class="p-4 space-y-4">
-  <FolderPicker bind:value={folder} label="Upload Folder" onchange={onFolderChange} />
+  <FolderPicker bind:value={state.folder} label="Upload Folder" onchange={onFolderChange} />
   
-  {#if folder}
+  {#if state.folder}
     <div class="p-4 bg-gray-50 rounded-lg">
       <p class="text-sm text-gray-700">
         {@html getMediaDescription()}
