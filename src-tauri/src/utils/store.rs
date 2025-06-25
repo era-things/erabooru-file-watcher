@@ -8,7 +8,7 @@ pub struct Settings {
     pub server: String,
 }
 
-pub fn get_settings_from_store(app: &tauri::AppHandle) -> Result<Settings, String> {
+pub fn get_settings(app: &tauri::AppHandle) -> Result<Settings, String> {
     let store = app.store("store.json").map_err(|e| e.to_string())?;
 
     let settings_value = store.get("settings");

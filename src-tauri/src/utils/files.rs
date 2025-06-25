@@ -13,6 +13,14 @@ pub fn is_media_file(path: &Path) -> bool {
     }
 }
 
+pub fn get_file_mime_type(path: &Path) -> Option<String> {
+    if !path.is_file() {
+        return None;
+    }
+    let guess = MimeGuess::from_path(path).first();
+    guess.map(|m| m.essence_str().to_string())
+}
+
 pub fn retry_read_file(
     path: &Path,
     max_retries: u32,

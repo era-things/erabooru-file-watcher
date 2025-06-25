@@ -5,7 +5,7 @@ use crate::utils;
 #[tauri::command]
 pub fn load_settings(app: AppHandle) -> Result<utils::store::Settings, String> {
     println!("Loading settings");
-    utils::store::get_settings_from_store(&app)
+    utils::store::get_settings(&app)
 }
 
 #[tauri::command]
