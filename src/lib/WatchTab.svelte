@@ -16,7 +16,7 @@
 
   let { state = $bindable() }: Props = $props();
 
-  type Settings = { folder: string; server: string };
+  type Settings = { folder: string; server: string; auto_tags?: any };
 
   async function loadState() {
     const store = await load('store.json');
@@ -29,7 +29,10 @@
 
   async function saveState() {
     const store = await load('store.json');
-    await store.set('settings', { folder: state.folder, server: state.server });
+    const current = (await store.get<Settings>('settings')) || {} as any;
+    current.folder = state.folder;
+    current.server = state.server;
+    await store.set('settings', current);
     await store.save();
   }
 

@@ -3,9 +3,17 @@ use tauri_plugin_store::StoreExt;
 
 
 #[derive(Default, Serialize, Deserialize, Clone)]
+pub struct AutoTagRule {
+    pub folder: String,
+    pub tags: String,
+}
+
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Settings {
     pub folder: String,
     pub server: String,
+    #[serde(default)]
+    pub auto_tags: Vec<AutoTagRule>,
 }
 
 pub fn get_settings(app: &tauri::AppHandle) -> Result<Settings, String> {

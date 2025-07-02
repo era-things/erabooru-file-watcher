@@ -9,13 +9,25 @@ pub fn load_settings(app: AppHandle) -> Result<utils::store::Settings, String> {
 }
 
 #[tauri::command]
-pub fn save_settings(app: AppHandle, folder: String, server: String) -> Result<(), String> {
+pub fn save_settings(
+    app: AppHandle,
+    folder: String,
+    server: String,
+    auto_tags: Vec<utils::store::AutoTagRule>,
+) -> Result<(), String> {
     println!("Saving settings: folder = {}, server = {}", folder, server);
-    
-    let store = app.store("store.json").map_err(|e| e.to_string())?;
-    let settings = utils::store::Settings { folder, server };
 
-    store.set("settings", serde_json::to_value(&settings).map_err(|e| e.to_string())?);
+    let store = app.store("store.json").map_err(|e| e.to_string())?;
+    let settings = utils::store::Settings {
+        folder,
+        server,
+        auto_tags,
+    };
+
+    store.set(
+        "settings",
+        serde_json::to_value(&settings).map_err(|e| e.to_string())?,
+    );
     store.save().map_err(|e| e.to_string())?;
     
     Ok(())
