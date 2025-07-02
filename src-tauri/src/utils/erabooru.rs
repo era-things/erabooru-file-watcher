@@ -3,11 +3,16 @@ use reqwest::blocking::Client;
 
 #[derive(Debug)]
 pub enum UploadResult {
-    Uploaded,
-    Duplicate,
+    Uploaded(String),
+    Duplicate(String),
 }
 
-pub fn upload_media(client: &Client, server: &str, data: Vec<u8>, content_type: &str) -> Result<UploadResult, String> {
+pub fn upload_media(
+    client: &Client,
+    server: &str,
+    data: Vec<u8>,
+    content_type: &str,
+) -> Result<UploadResult, String> {
     let hash = xxh3_128(&data);
 
     let filename = format!("{:032x}", hash);
@@ -38,14 +43,27 @@ pub fn upload_media(client: &Client, server: &str, data: Vec<u8>, content_type: 
         .map_err(|e| e.to_string())?;
 
     match put_resp.status().as_u16() {
-        200 | 201 | 204 => {
-            Ok(UploadResult::Uploaded)
-        }
-        412 => {
-            Ok(UploadResult::Duplicate)
-        }
+        200 | 201 | 204 => Ok(UploadResult::Uploaded(filename)),
+        412 => Ok(UploadResult::Duplicate(filename)),
         status => {
             Err(format!("Upload failed with status {}: {}", status, put_resp.status().canonical_reason().unwrap_or("Unknown error")))
         }
     }
+}
+
+pub fn add_tags(
+    client: &Client,
+    server: &str,
+    id: &str,
+    tags: &[&str],
+) -> Result<(), String> {
+    let url = format!("{}/api/media/{}/tags", server.trim_end_matches('/'), id);
+    client
+        .post(url)
+        .json(&tags)
+        .send()
+        .map_err(|e| e.to_string())?
+        .error_for_status()
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }

@@ -1,7 +1,7 @@
 use walkdir::WalkDir;
 use reqwest::blocking::Client;
 use std::time::Duration;
-use crate::utils::{self, erabooru::UploadResult};
+use crate::utils::{self, erabooru::{UploadResult, add_tags}, tagging};
 
 #[tauri::command]
 pub fn scan_folder(folder: String) -> Result<(u64, u64, u64), String> {
@@ -46,8 +46,26 @@ pub fn upload_folder(app: tauri::AppHandle, folder: String) -> Result<(), String
             let content_type = utils::files::get_file_mime_type(path)
                 .unwrap_or_else(|| "application/octet-stream".into());
             match utils::erabooru::upload_media(&client, &settings.server, data, &content_type) {
-                Ok(UploadResult::Uploaded) => println!("✓ Uploaded: {}", path.display()),
-                Ok(UploadResult::Duplicate) => println!("⚠ Skipped (duplicate): {}", path.display()),
+                Ok(UploadResult::Uploaded(id)) => {
+                    println!("✓ Uploaded: {}", path.display());
+                    let tags = tagging::tags_for_path(path, &settings.auto_tags);
+                    if !tags.is_empty() {
+                        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
+                        if let Err(e) = add_tags(&client, &settings.server, &id, &tag_refs) {
+                            println!("Failed to tag {}: {}", path.display(), e);
+                        }
+                    }
+                }
+                Ok(UploadResult::Duplicate(id)) => {
+                    println!("⚠ Skipped (duplicate): {}", path.display());
+                    let tags = tagging::tags_for_path(path, &settings.auto_tags);
+                    if !tags.is_empty() {
+                        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
+                        if let Err(e) = add_tags(&client, &settings.server, &id, &tag_refs) {
+                            println!("Failed to tag {}: {}", path.display(), e);
+                        }
+                    }
+                }
                 Err(e) => println!("✗ Failed to upload {}: {}", path.display(), e),
             }
         }

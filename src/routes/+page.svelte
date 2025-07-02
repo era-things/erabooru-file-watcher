@@ -2,8 +2,9 @@
   import Tabs from '$lib/Tabs.svelte';
   import WatchTab from '$lib/WatchTab.svelte';
   import UploadTab from '$lib/UploadTab.svelte';
+  import SettingsTab from '$lib/SettingsTab.svelte';
 
-  let tab = $state<'watch' | 'upload'>('watch');
+  let tab = $state<'watch' | 'upload' | 'settings'>('watch');
   
   // Single state objects for each tab
   let watchState = $state({
@@ -24,6 +25,8 @@
 
 {#if tab === 'watch'}
   <WatchTab bind:state={watchState} />
-{:else}
+{:else if tab === 'upload'}
   <UploadTab bind:state={uploadState} />
+{:else}
+  <SettingsTab />
 {/if}
