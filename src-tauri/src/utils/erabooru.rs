@@ -1,5 +1,8 @@
 use xxhash_rust::xxh3::xxh3_128;
 use reqwest::blocking::Client;
+use std::{path::Path, thread, time::Duration};
+
+use crate::utils::{files, tagging, store::AutoTagRule};
 
 #[derive(Debug)]
 pub enum UploadResult {
@@ -87,4 +90,121 @@ pub fn add_tags(
         let error_text = resp.text().unwrap_or_else(|_| "Unknown error".to_string());
         Err(format!("Failed to add tags, status {}: {}", status, error_text))
     }
+}
+
+pub fn add_date(
+    client: &Client,
+    server: &str,
+    id: &str,
+    name: &str,
+    value: &str,
+) -> Result<(), String> {
+    let url = format!("{}/api/media/{}/dates", server.trim_end_matches('/'), id);
+
+    let resp = client
+        .post(&url)
+        .json(&serde_json::json!({ "dates": [{ "name": name, "value": value }] }))
+        .send()
+        .map_err(|e| format!("Failed to add date: {}", e))?;
+
+    let status = resp.status();
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_text = resp.text().unwrap_or_else(|_| "Unknown error".to_string());
+        Err(format!("Failed to add date, status {}: {}", status, error_text))
+    }
+}
+
+pub fn apply_tags_and_date(
+    client: &Client,
+    server: &str,
+    path: &Path,
+    id: &str,
+    auto_tags: &[AutoTagRule],
+    override_upload_date: bool,
+) {
+    // Wait for the media to be indexed before applying tags and dates
+    if let Err(e) = wait_for_media_indexing(
+        client, 
+        server, 
+        id, 
+        10, // max attempts
+        Duration::from_millis(500) // delay between attempts
+    ) {
+        println!("Failed to wait for media indexing for {}: {}", path.display(), e);
+        return;
+    }
+    
+    let tags = tagging::tags_for_path(path, auto_tags);
+    if !tags.is_empty() {
+        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
+        if let Err(e) = add_tags(client, server, id, &tag_refs) {
+            println!("Failed to tag {}: {}", path.display(), e);
+        }
+    }
+
+    if override_upload_date {
+        if let Ok(date) = files::file_modified_utc(path) {
+            if let Err(e) = add_date(client, server, id, "upload", &date) {
+                println!("Failed to set date for {}: {}", path.display(), e);
+            }
+        }
+    }
+}
+
+pub fn check_media_exists(
+    client: &Client,
+    server: &str,
+    id: &str,
+) -> Result<bool, String> {
+    let url = format!("{}/api/media/{}", server.trim_end_matches('/'), id);
+    
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("Failed to check media existence: {}", e))?;
+    
+    match resp.status().as_u16() {
+        200 => Ok(true),
+        404 => Ok(false),
+        status => Err(format!("Unexpected status when checking media: {}", status)),
+    }
+}
+
+pub fn wait_for_media_indexing(
+    client: &Client,
+    server: &str,
+    id: &str,
+    max_attempts: u32,
+    delay: Duration,
+) -> Result<(), String> {
+    println!("Waiting for media {} to be indexed...", id);
+    
+    for attempt in 1..=max_attempts {
+        match check_media_exists(client, server, id) {
+            Ok(true) => {
+                println!("Media {} is now available (attempt {})", id, attempt);
+                return Ok(());
+            }
+            Ok(false) => {
+                if attempt < max_attempts {
+                    println!("Media {} not yet available, waiting... (attempt {}/{})", id, attempt, max_attempts);
+                    thread::sleep(delay);
+                } else {
+                    return Err(format!("Media {} was not indexed after {} attempts", id, max_attempts));
+                }
+            }
+            Err(e) => {
+                println!("Error checking media existence: {}", e);
+                if attempt < max_attempts {
+                    thread::sleep(delay);
+                } else {
+                    return Err(format!("Failed to verify media indexing: {}", e));
+                }
+            }
+        }
+    }
+    
+    Ok(())
 }

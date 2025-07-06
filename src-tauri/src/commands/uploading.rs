@@ -1,7 +1,7 @@
 use walkdir::WalkDir;
 use reqwest::blocking::Client;
 use std::time::Duration;
-use crate::utils::{self, erabooru::{UploadResult, add_tags}, tagging};
+use crate::utils::{self, erabooru::UploadResult};
 
 #[tauri::command]
 pub fn scan_folder(folder: String) -> Result<(u64, u64, u64), String> {
@@ -48,23 +48,25 @@ pub fn upload_folder(app: tauri::AppHandle, folder: String) -> Result<(), String
             match utils::erabooru::upload_media(&client, &settings.server, data, &content_type) {
                 Ok(UploadResult::Uploaded(id)) => {
                     println!("✓ Uploaded: {}", path.display());
-                    let tags = tagging::tags_for_path(path, &settings.auto_tags);
-                    if !tags.is_empty() {
-                        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
-                        if let Err(e) = add_tags(&client, &settings.server, &id, &tag_refs) {
-                            println!("Failed to tag {}: {}", path.display(), e);
-                        }
-                    }
+                    utils::erabooru::apply_tags_and_date(
+                        &client,
+                        &settings.server,
+                        path,
+                        &id,
+                        &settings.auto_tags,
+                        settings.override_upload_date,
+                    );
                 }
                 Ok(UploadResult::Duplicate(id)) => {
                     println!("⚠ Skipped (duplicate): {}", path.display());
-                    let tags = tagging::tags_for_path(path, &settings.auto_tags);
-                    if !tags.is_empty() {
-                        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
-                        if let Err(e) = add_tags(&client, &settings.server, &id, &tag_refs) {
-                            println!("Failed to tag {}: {}", path.display(), e);
-                        }
-                    }
+                    utils::erabooru::apply_tags_and_date(
+                        &client,
+                        &settings.server,
+                        path,
+                        &id,
+                        &settings.auto_tags,
+                        settings.override_upload_date,
+                    );
                 }
                 Err(e) => println!("✗ Failed to upload {}: {}", path.display(), e),
             }

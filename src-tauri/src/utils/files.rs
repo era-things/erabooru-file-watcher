@@ -1,5 +1,6 @@
 use std::path::Path;
 use mime_guess::MimeGuess;
+use chrono::prelude::*;
 
 pub fn is_media_file(path: &Path) -> bool {
     if !path.is_file() {
@@ -43,4 +44,12 @@ pub fn retry_read_file(
         }
     }
     Err("File remained locked after all retry attempts".to_string())
+}
+
+pub fn file_modified_utc(path: &Path) -> Result<String, String> {
+    let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+    let modified = metadata.modified().map_err(|e| e.to_string())?;
+    let datetime: chrono::DateTime<chrono::Utc> = modified.into();
+    let formatted: String = datetime.format("%Y-%m-%d").to_string();
+    Ok(formatted)
 }

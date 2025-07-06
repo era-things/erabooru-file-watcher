@@ -14,6 +14,8 @@ pub struct Settings {
     pub server: String,
     #[serde(default)]
     pub auto_tags: Vec<AutoTagRule>,
+    #[serde(default)]
+    pub override_upload_date: bool,
 }
 
 pub fn get_settings(app: &tauri::AppHandle) -> Result<Settings, String> {
