@@ -50,5 +50,6 @@ pub fn file_modified_utc(path: &Path) -> Result<String, String> {
     let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
     let modified = metadata.modified().map_err(|e| e.to_string())?;
     let datetime: chrono::DateTime<chrono::Utc> = modified.into();
-    Ok(datetime.to_rfc3339())
+    let formatted: String = datetime.format("%Y-%m-%d").to_string();
+    Ok(formatted)
 }
