@@ -14,6 +14,7 @@ pub fn save_settings(
     folder: String,
     server: String,
     auto_tags: Vec<utils::store::AutoTagRule>,
+    override_upload_date: bool,
 ) -> Result<(), String> {
     println!("Saving settings: folder = {}, server = {}", folder, server);
 
@@ -22,6 +23,7 @@ pub fn save_settings(
         folder,
         server,
         auto_tags,
+        override_upload_date,
     };
 
     store.set(

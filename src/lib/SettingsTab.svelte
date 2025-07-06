@@ -8,17 +8,20 @@
   }
 
   let pairs = $state<Pair[]>([]);
+  let overrideUploadDate = $state(false);
 
   async function loadPairs() {
     const store = await load('store.json');
     const settings = await store.get<any>('settings');
     pairs = settings?.auto_tags ?? [];
+    overrideUploadDate = settings?.override_upload_date ?? false;
   }
 
   async function savePairs() {
     const store = await load('store.json');
     const settings = await store.get<any>('settings') ?? {};
     settings.auto_tags = pairs;
+    settings.override_upload_date = overrideUploadDate;
     await store.set('settings', settings);
     await store.save();
   }
@@ -35,6 +38,10 @@
 </script>
 
 <div class="p-4 space-y-4">
+  <div class="flex items-center gap-2">
+    <input type="checkbox" bind:checked={overrideUploadDate} id="override-date" />
+    <label for="override-date" class="text-sm">Override upload date with system date</label>
+  </div>
   <div class="space-y-2">
     {#each pairs as pair, i}
       <div class="flex gap-2 items-center">

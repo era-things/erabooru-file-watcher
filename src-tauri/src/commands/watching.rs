@@ -3,11 +3,10 @@ use std::sync::mpsc::channel;
 use notify::{recommended_watcher, EventKind, RecursiveMode, Watcher};
 use reqwest::blocking::Client;
 
-use crate::utils::erabooru::{UploadResult, add_tags};
+use crate::utils::erabooru::UploadResult;
 // Import from your other modules
 use crate::{STATE, WatcherHandle};
 use crate::utils;
-use crate::utils::tagging;
 
 #[tauri::command]
 pub fn start_watching(app: tauri::AppHandle) -> Result<(), String> {
@@ -59,23 +58,25 @@ pub fn start_watching(app: tauri::AppHandle) -> Result<(), String> {
                             match utils::erabooru::upload_media(&client, &settings.server, data, &content_type) {
                                 Ok(UploadResult::Uploaded(id)) => {
                                     println!("✓ Uploaded: {}", path.display());
-                                    let tags = tagging::tags_for_path(&path, &settings.auto_tags);
-                                    if !tags.is_empty() {
-                                        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
-                                        if let Err(e) = add_tags(&client, &settings.server, &id, &tag_refs) {
-                                            println!("Failed to tag {}: {}", path.display(), e);
-                                        }
-                                    }
+                                    utils::erabooru::apply_tags_and_date(
+                                        &client,
+                                        &settings.server,
+                                        &path,
+                                        &id,
+                                        &settings.auto_tags,
+                                        settings.override_upload_date,
+                                    );
                                 }
                                 Ok(UploadResult::Duplicate(id)) => {
                                     println!("⚠ Skipped (duplicate): {}", path.display());
-                                    let tags = tagging::tags_for_path(&path, &settings.auto_tags);
-                                    if !tags.is_empty() {
-                                        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
-                                        if let Err(e) = add_tags(&client, &settings.server, &id, &tag_refs) {
-                                            println!("Failed to tag {}: {}", path.display(), e);
-                                        }
-                                    }
+                                    utils::erabooru::apply_tags_and_date(
+                                        &client,
+                                        &settings.server,
+                                        &path,
+                                        &id,
+                                        &settings.auto_tags,
+                                        settings.override_upload_date,
+                                    );
                                 }
                                 Err(e) => println!("✗ Failed to upload {}: {}", path.display(), e),
                             }

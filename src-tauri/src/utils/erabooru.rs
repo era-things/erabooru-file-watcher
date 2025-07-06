@@ -1,5 +1,8 @@
 use xxhash_rust::xxh3::xxh3_128;
 use reqwest::blocking::Client;
+use std::path::Path;
+
+use crate::utils::{files, tagging, store::AutoTagRule};
 
 #[derive(Debug)]
 pub enum UploadResult {
@@ -86,5 +89,54 @@ pub fn add_tags(
     } else {
         let error_text = resp.text().unwrap_or_else(|_| "Unknown error".to_string());
         Err(format!("Failed to add tags, status {}: {}", status, error_text))
+    }
+}
+
+pub fn add_date(
+    client: &Client,
+    server: &str,
+    id: &str,
+    name: &str,
+    value: &str,
+) -> Result<(), String> {
+    let url = format!("{}/api/media/{}/dates", server.trim_end_matches('/'), id);
+
+    let resp = client
+        .post(&url)
+        .json(&serde_json::json!({ "dates": [{ "name": name, "value": value }] }))
+        .send()
+        .map_err(|e| format!("Failed to add date: {}", e))?;
+
+    let status = resp.status();
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_text = resp.text().unwrap_or_else(|_| "Unknown error".to_string());
+        Err(format!("Failed to add date, status {}: {}", status, error_text))
+    }
+}
+
+pub fn apply_tags_and_date(
+    client: &Client,
+    server: &str,
+    path: &Path,
+    id: &str,
+    auto_tags: &[AutoTagRule],
+    override_upload_date: bool,
+) {
+    let tags = tagging::tags_for_path(path, auto_tags);
+    if !tags.is_empty() {
+        let tag_refs: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
+        if let Err(e) = add_tags(client, server, id, &tag_refs) {
+            println!("Failed to tag {}: {}", path.display(), e);
+        }
+    }
+
+    if override_upload_date {
+        if let Ok(date) = files::file_modified_utc(path) {
+            if let Err(e) = add_date(client, server, id, "upload", &date) {
+                println!("Failed to set date for {}: {}", path.display(), e);
+            }
+        }
     }
 }
