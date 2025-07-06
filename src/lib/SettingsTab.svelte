@@ -9,12 +9,22 @@
 
   let pairs = $state<Pair[]>([]);
   let overrideUploadDate = $state(false);
+  let loaded = false;
 
   async function loadPairs() {
     const store = await load('store.json');
     const settings = await store.get<any>('settings');
     pairs = settings?.auto_tags ?? [];
     overrideUploadDate = settings?.override_upload_date ?? false;
+    loaded = true;
+  }
+
+  async function saveOverride(value: boolean) {
+    const store = await load('store.json');
+    const settings = (await store.get<any>('settings')) ?? {};
+    settings.override_upload_date = value;
+    await store.set('settings', settings);
+    await store.save();
   }
 
   async function savePairs() {
@@ -35,6 +45,12 @@
   }
 
   onMount(loadPairs);
+
+  $effect(() => {
+    if (loaded) {
+      saveOverride(overrideUploadDate);
+    }
+  });
 </script>
 
 <div class="p-4 space-y-4">
